@@ -625,9 +625,15 @@ function SermonScreen({ onComplete, onBack }) {
   };
 
   const handleNavNext = () => {
-    setShowPause(false);
     setIsPlaying(false);
     setCompletedSegments((prev) => new Set([...prev, currentSegment]));
+    // If not already showing the pause question and this segment has one, show it first
+    if (!showPause && segment.pauseAfter) {
+      setShowPause(true);
+      return;
+    }
+    // Otherwise advance to next segment
+    setShowPause(false);
     if (currentSegment < SERMON_SEGMENTS.length - 1) {
       setCurrentSegment((s) => s + 1);
     } else {
