@@ -359,73 +359,127 @@ function QuestionCard({ data, onAnswer }) {
   );
 }
 
-// ─── Sermon Player ───
-function SermonPlayer({ segment, onSegmentComplete, isPlaying, setIsPlaying }) {
-  const [progress, setProgress] = useState(0);
+// ─── Vimeo Sermon Player ───
+// Pause-point timestamps (in seconds) — these correspond to the sermon segments
+// TODO: Update these timestamps to match the actual sermon video timecodes
+// For now these are estimated based on the sermon structure
+const PAUSE_TIMESTAMPS = [
+  { time: 180, segmentIndex: 0 },    // ~3 min — end of intro
+  { time: 540, segmentIndex: 1 },    // ~9 min — end of definition section
+  { time: 840, segmentIndex: 2 },    // ~14 min — end of Macedonians
+  { time: 1320, segmentIndex: 3 },   // ~22 min — end of gospel section
+  { time: 1740, segmentIndex: 4 },   // ~29 min — end of three shifts
+  { time: 2040, segmentIndex: 5 },   // ~34 min — end of scarcity/abundance
+  { time: 2400, segmentIndex: 6 },   // ~40 min — end of Manning's story
+  { time: 2580, segmentIndex: 7 },   // ~43 min — end of closing
+];
 
+const VIMEO_VIDEO_ID = "1071145301";
+
+function SermonPlayer({ segment, segmentIndex, onSegmentComplete, isPlaying, setIsPlaying, playerRef }) {
+  const iframeRef = useRef(null);
+  const [loaded, setLoaded] = useState(false);
+
+  // Initialize Vimeo Player API
   useEffect(() => {
-    if (!isPlaying) return;
-    const interval = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 100) { clearInterval(interval); onSegmentComplete(); return 100; }
-        return p + 0.5;
-      });
-    }, 50);
-    return () => clearInterval(interval);
-  }, [isPlaying, onSegmentComplete]);
+    // Load Vimeo Player API script if not already loaded
+    if (!window.Vimeo) {
+      const script = document.createElement('script');
+      script.src = 'https://player.vimeo.com/api/player.js';
+      script.onload = () => initPlayer();
+      document.head.appendChild(script);
+    } else {
+      initPlayer();
+    }
 
-  useEffect(() => { setProgress(0); }, [segment.id]);
+    function initPlayer() {
+      if (iframeRef.current && !playerRef.current) {
+        const player = new window.Vimeo.Player(iframeRef.current);
+        playerRef.current = player;
+
+        player.on('loaded', () => setLoaded(true));
+
+        // Monitor time for pause points
+        player.on('timeupdate', (data) => {
+          const currentTime = data.seconds;
+          const currentPause = PAUSE_TIMESTAMPS[segmentIndex];
+          if (currentPause && currentTime >= currentPause.time) {
+            player.pause();
+            onSegmentComplete();
+          }
+        });
+      }
+    }
+    // eslint-disable-next-line
+  }, []);
+
+  // Control play/pause from parent
+  useEffect(() => {
+    if (!playerRef.current || !loaded) return;
+    if (isPlaying) {
+      playerRef.current.play();
+    } else {
+      playerRef.current.pause();
+    }
+  }, [isPlaying, loaded, playerRef]);
+
+  // When segment changes, seek to the right spot and play
+  useEffect(() => {
+    if (!playerRef.current || !loaded || segmentIndex === 0) return;
+    const prevPause = PAUSE_TIMESTAMPS[segmentIndex - 1];
+    if (prevPause) {
+      playerRef.current.setCurrentTime(prevPause.time + 1);
+    }
+  }, [segmentIndex, loaded, playerRef]);
 
   return (
     <div>
       <div style={{
-        aspectRatio: "16/9", borderRadius: 16,
-        background: "linear-gradient(145deg, #E8E0D0 0%, #D4CBBA 50%, #C8BDA8 100%)",
-        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        position: "relative", overflow: "hidden",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)",
+        borderRadius: 16, overflow: "hidden", position: "relative",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04)",
+        background: "#1a1a1a",
       }}>
-        {/* Subtle leaf pattern overlay */}
-        <div style={{ position: "absolute", inset: 0, opacity: 0.04,
-          background: "radial-gradient(circle at 20% 30%, #6B8F71 0%, transparent 50%), radial-gradient(circle at 80% 70%, #6B8F71 0%, transparent 50%)",
-        }} />
-
-        <div style={{ fontSize: 11, color: T.textMuted, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10, fontFamily: sans, fontWeight: 500 }}>
-          Now Playing
-        </div>
-        <div style={{ fontFamily: serif, fontSize: 22, color: T.text, marginBottom: 4, fontWeight: 500 }}>
-          {segment.title}
-        </div>
-        <div style={{ fontSize: 12, color: T.textMuted, fontFamily: sans }}>
-          John Manning · {segment.duration}
+        {/* Vimeo embed */}
+        <div style={{ position: "relative", paddingBottom: "56.25%", height: 0 }}>
+          <iframe
+            ref={iframeRef}
+            src={`https://player.vimeo.com/video/${VIMEO_VIDEO_ID}?badge=0&autopause=0&player_id=0&app_id=58479&transparent=0`}
+            style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
+            allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media"
+            title="John Manning — Generosity (Holy Habits)"
+          />
         </div>
 
-        <button
-          onClick={() => setIsPlaying(!isPlaying)}
-          style={{
-            marginTop: 24, width: 60, height: 60, borderRadius: "50%",
-            border: `2px solid ${T.sage}40`, background: "rgba(255,255,255,0.7)",
-            color: T.sageText, fontSize: 20, cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            transition: "all 0.2s", backdropFilter: "blur(10px)",
-            boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-          }}
-        >
-          {isPlaying ? "⏸" : "▶"}
-        </button>
-
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 3, background: "rgba(0,0,0,0.06)" }}>
-          <div style={{ width: `${progress}%`, height: "100%", background: T.sage, transition: "width 0.1s linear" }} />
-        </div>
+        {/* Loading overlay */}
+        {!loaded && (
+          <div style={{
+            position: "absolute", inset: 0, display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            background: "linear-gradient(145deg, #E8E0D0 0%, #D4CBBA 100%)",
+          }}>
+            <div style={{ fontSize: 11, color: T.textMuted, letterSpacing: 2, textTransform: "uppercase", fontFamily: sans }}>
+              Loading sermon...
+            </div>
+          </div>
+        )}
       </div>
 
-      {segment.summary && (
-        <FadeIn delay={300}>
-          <p style={{ fontFamily: serif, fontSize: 15, color: T.textMuted, lineHeight: 1.8, marginTop: 18, padding: "0 4px", fontWeight: 300 }}>
+      {/* Segment info below video */}
+      <div style={{ marginTop: 16, padding: "0 4px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+          <span style={{ fontFamily: serif, fontSize: 18, color: T.text, fontWeight: 500 }}>
+            {segment.title}
+          </span>
+          <span style={{ fontSize: 11, color: T.textDim, fontFamily: sans }}>
+            {segment.duration}
+          </span>
+        </div>
+        {segment.summary && (
+          <p style={{ fontFamily: serif, fontSize: 14, color: T.textMuted, lineHeight: 1.8, fontWeight: 300 }}>
             {segment.summary}
           </p>
-        </FadeIn>
-      )}
+        )}
+      </div>
 
       {segment.scripture && (
         <ScriptureBlock passage={segment.scripture} reference={segment.scriptureRef} />
@@ -513,6 +567,7 @@ function SermonScreen({ onComplete }) {
   const [showPause, setShowPause] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [completedSegments, setCompletedSegments] = useState(new Set());
+  const playerRef = useRef(null);
 
   const segment = SERMON_SEGMENTS[currentSegment];
   const overallProgress = Math.round(((completedSegments.size) / SERMON_SEGMENTS.length) * 100);
@@ -566,9 +621,11 @@ function SermonScreen({ onComplete }) {
         <FadeIn key={`segment-${currentSegment}`}>
           <SermonPlayer
             segment={segment}
+            segmentIndex={currentSegment}
             onSegmentComplete={handleSegmentComplete}
             isPlaying={isPlaying}
             setIsPlaying={setIsPlaying}
+            playerRef={playerRef}
           />
         </FadeIn>
       ) : (
