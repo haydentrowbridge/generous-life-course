@@ -219,6 +219,32 @@ function Divider({ width = 48, color = T.bgSubtle, my = 28 }) {
   return <div style={{ width, height: 1, background: color, margin: `${my}px auto` }} />;
 }
 
+function BottomNav({ label, onBack, onNext }) {
+  const btnStyle = {
+    background: "none", border: "none", cursor: "pointer",
+    fontFamily: sans, fontSize: 13, color: T.textMuted, padding: "8px 12px",
+    borderRadius: 8, transition: "color 0.2s",
+    display: "flex", alignItems: "center", gap: 4,
+  };
+  return (
+    <div style={{
+      position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 50,
+      height: 46, display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "0 16px", background: T.bg, borderTop: `1px solid ${T.border}`,
+    }}>
+      <button onClick={onBack} style={btnStyle}>
+        <span style={{ fontSize: 15 }}>&lsaquo;</span> Back
+      </button>
+      <span style={{ fontSize: 11, color: T.textDim, fontFamily: sans, letterSpacing: 0.3 }}>
+        {label}
+      </span>
+      <button onClick={onNext} style={btnStyle}>
+        Next <span style={{ fontSize: 15 }}>&rsaquo;</span>
+      </button>
+    </div>
+  );
+}
+
 function ScriptureBlock({ passage, reference }) {
   return (
     <FadeIn delay={200}>
@@ -379,6 +405,16 @@ const VIMEO_VIDEO_ID = "1071145301";
 function SermonPlayer({ segment, segmentIndex, onSegmentComplete, isPlaying, setIsPlaying, playerRef }) {
   const iframeRef = useRef(null);
   const [loaded, setLoaded] = useState(false);
+  const segmentIndexRef = useRef(segmentIndex);
+  const onSegmentCompleteRef = useRef(onSegmentComplete);
+  const pauseFiredRef = useRef(false);
+
+  // Keep refs current so the timeupdate closure always sees latest values
+  useEffect(() => { segmentIndexRef.current = segmentIndex; }, [segmentIndex]);
+  useEffect(() => { onSegmentCompleteRef.current = onSegmentComplete; }, [onSegmentComplete]);
+
+  // Reset the pause-fired guard whenever the segment changes
+  useEffect(() => { pauseFiredRef.current = false; }, [segmentIndex]);
 
   // Initialize Vimeo Player API
   useEffect(() => {
@@ -399,13 +435,15 @@ function SermonPlayer({ segment, segmentIndex, onSegmentComplete, isPlaying, set
 
         player.on('loaded', () => setLoaded(true));
 
-        // Monitor time for pause points
+        // Monitor time for pause points — uses refs to avoid stale closures
         player.on('timeupdate', (data) => {
+          if (pauseFiredRef.current) return;
           const currentTime = data.seconds;
-          const currentPause = PAUSE_TIMESTAMPS[segmentIndex];
+          const currentPause = PAUSE_TIMESTAMPS[segmentIndexRef.current];
           if (currentPause && currentTime >= currentPause.time) {
+            pauseFiredRef.current = true;
             player.pause();
-            onSegmentComplete();
+            onSegmentCompleteRef.current();
           }
         });
       }
@@ -423,12 +461,16 @@ function SermonPlayer({ segment, segmentIndex, onSegmentComplete, isPlaying, set
     }
   }, [isPlaying, loaded, playerRef]);
 
-  // When segment changes, seek to the right spot and play
+  // When segment changes, seek to the right spot
   useEffect(() => {
-    if (!playerRef.current || !loaded || segmentIndex === 0) return;
-    const prevPause = PAUSE_TIMESTAMPS[segmentIndex - 1];
-    if (prevPause) {
-      playerRef.current.setCurrentTime(prevPause.time + 1);
+    if (!playerRef.current || !loaded) return;
+    if (segmentIndex === 0) {
+      playerRef.current.setCurrentTime(0);
+    } else {
+      const prevPause = PAUSE_TIMESTAMPS[segmentIndex - 1];
+      if (prevPause) {
+        playerRef.current.setCurrentTime(prevPause.time + 1);
+      }
     }
   }, [segmentIndex, loaded, playerRef]);
 
@@ -562,7 +604,7 @@ function WelcomeScreen({ onStart }) {
   );
 }
 
-function SermonScreen({ onComplete }) {
+function SermonScreen({ onComplete, onBack }) {
   const [currentSegment, setCurrentSegment] = useState(0);
   const [showPause, setShowPause] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -571,6 +613,27 @@ function SermonScreen({ onComplete }) {
 
   const segment = SERMON_SEGMENTS[currentSegment];
   const overallProgress = Math.round(((completedSegments.size) / SERMON_SEGMENTS.length) * 100);
+
+  const handleNavBack = () => {
+    setShowPause(false);
+    setIsPlaying(false);
+    if (currentSegment > 0) {
+      setCurrentSegment((s) => s - 1);
+    } else {
+      onBack();
+    }
+  };
+
+  const handleNavNext = () => {
+    setShowPause(false);
+    setIsPlaying(false);
+    setCompletedSegments((prev) => new Set([...prev, currentSegment]));
+    if (currentSegment < SERMON_SEGMENTS.length - 1) {
+      setCurrentSegment((s) => s + 1);
+    } else {
+      onComplete();
+    }
+  };
 
   const handleSegmentComplete = useCallback(() => {
     setIsPlaying(false);
@@ -601,7 +664,7 @@ function SermonScreen({ onComplete }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", padding: "20px 20px 40px", maxWidth: 560, margin: "0 auto" }}>
+    <div style={{ minHeight: "100vh", padding: "20px 20px 72px", maxWidth: 560, margin: "0 auto" }}>
       {/* Top bar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div style={{ fontSize: 11, color: T.textDim, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: sans, fontWeight: 500 }}>
@@ -617,23 +680,23 @@ function SermonScreen({ onComplete }) {
         <div style={{ width: `${overallProgress}%`, height: "100%", background: T.sage, borderRadius: 2, transition: "width 0.5s" }} />
       </div>
 
-      {!showPause ? (
-        <FadeIn key={`segment-${currentSegment}`}>
-          <SermonPlayer
-            segment={segment}
-            segmentIndex={currentSegment}
-            onSegmentComplete={handleSegmentComplete}
-            isPlaying={isPlaying}
-            setIsPlaying={setIsPlaying}
-            playerRef={playerRef}
-          />
-        </FadeIn>
-      ) : (
+      {/* Always keep the player mounted so the iframe/Vimeo instance persists */}
+      <SermonPlayer
+        segment={segment}
+        segmentIndex={currentSegment}
+        onSegmentComplete={handleSegmentComplete}
+        isPlaying={isPlaying}
+        setIsPlaying={setIsPlaying}
+        playerRef={playerRef}
+      />
+
+      {showPause && (
         <FadeIn key={`pause-${currentSegment}`}>
           <div style={{
             background: T.bgCard, borderRadius: 16, padding: 28,
             border: `1px solid ${T.borderLight}`,
             boxShadow: "0 4px 20px rgba(0,0,0,0.04)",
+            marginTop: 20,
           }}>
             {segment.pauseAfter.type === "question" ? (
               <QuestionCard data={segment.pauseAfter} onAnswer={handlePauseComplete} />
@@ -645,11 +708,17 @@ function SermonScreen({ onComplete }) {
       )}
 
       <ProgressDots total={SERMON_SEGMENTS.length} current={currentSegment} />
+
+      <BottomNav
+        label={`Segment ${currentSegment + 1} of ${SERMON_SEGMENTS.length}`}
+        onBack={handleNavBack}
+        onNext={handleNavNext}
+      />
     </div>
   );
 }
 
-function HolyHabitsScreen({ onComplete }) {
+function HolyHabitsScreen({ onComplete, onBack }) {
   const [currentSection, setCurrentSection] = useState(0);
   const [responses, setResponses] = useState({});
   const [definitionStep, setDefinitionStep] = useState(0);
@@ -664,13 +733,29 @@ function HolyHabitsScreen({ onComplete }) {
     }
   };
 
+  const handleNavBack = () => {
+    if (currentSection > 0) {
+      setCurrentSection((s) => s - 1);
+    } else {
+      onBack();
+    }
+  };
+
+  const handleNavNext = () => {
+    if (currentSection < HOLY_HABITS_SECTIONS.length - 1) {
+      setCurrentSection((s) => s + 1);
+    } else {
+      onComplete();
+    }
+  };
+
   const btnStyle = {
     fontFamily: sans, fontSize: 13, fontWeight: 500, padding: "12px 32px", borderRadius: 28,
     border: `1.5px solid ${T.gold}40`, background: T.goldSoft, color: T.gold, cursor: "pointer",
   };
 
   return (
-    <div style={{ minHeight: "100vh", padding: "20px 20px 40px", maxWidth: 560, margin: "0 auto" }}>
+    <div style={{ minHeight: "100vh", padding: "20px 20px 72px", maxWidth: 560, margin: "0 auto" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div style={{ fontSize: 11, color: T.gold, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: sans, fontWeight: 500 }}>
           Module 1 · Holy Habits
@@ -784,11 +869,17 @@ function HolyHabitsScreen({ onComplete }) {
       </FadeIn>
 
       <ProgressDots total={HOLY_HABITS_SECTIONS.length} current={currentSection} />
+
+      <BottomNav
+        label={`Activity ${currentSection + 1} of ${HOLY_HABITS_SECTIONS.length}`}
+        onBack={handleNavBack}
+        onNext={handleNavNext}
+      />
     </div>
   );
 }
 
-function ClosingScreen() {
+function ClosingScreen({ onBack }) {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: 32, textAlign: "center" }}>
       <FadeIn>
@@ -851,6 +942,16 @@ function ClosingScreen() {
         <p style={{ fontSize: 12, color: T.textDim, marginTop: 32, fontFamily: sans }}>
           Daily formation touchpoints begin tomorrow.
         </p>
+        <button
+          onClick={onBack}
+          style={{
+            background: "none", border: "none", cursor: "pointer",
+            fontFamily: sans, fontSize: 12, color: T.textDim, marginTop: 16,
+            padding: "6px 12px", transition: "color 0.2s",
+          }}
+        >
+          &lsaquo; Back to Holy Habits
+        </button>
       </FadeIn>
     </div>
   );
@@ -867,9 +968,9 @@ export default function App() {
   return (
     <div style={{ background: T.bg, color: T.text, minHeight: "100vh", fontFamily: sans }}>
       {screen === "welcome" && <WelcomeScreen onStart={() => setScreen("sermon")} />}
-      {screen === "sermon" && <SermonScreen onComplete={() => setScreen("holyhabits")} />}
-      {screen === "holyhabits" && <HolyHabitsScreen onComplete={() => setScreen("complete")} />}
-      {screen === "complete" && <ClosingScreen />}
+      {screen === "sermon" && <SermonScreen onComplete={() => setScreen("holyhabits")} onBack={() => setScreen("welcome")} />}
+      {screen === "holyhabits" && <HolyHabitsScreen onComplete={() => setScreen("complete")} onBack={() => setScreen("sermon")} />}
+      {screen === "complete" && <ClosingScreen onBack={() => setScreen("holyhabits")} />}
     </div>
   );
 }
