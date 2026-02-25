@@ -171,8 +171,8 @@ const MODULES = [
     description: "Discover what the Bible actually says about money \u2014 and why it says so much. Ross Lester walks through the parable of the Rich Fool and three observations that change everything.",
     timeSermon: "~39 min",
     timeActivity: "~20 min",
-    // TODO: Replace with actual Vimeo ID for Ross Lester \u2014 God & Money Part 1
-    vimeoId: "TODO_MODULE_2",
+    // Ross Lester — God & Money Part 1 (Jan 22, 2023)
+    vimeoId: "791645780",
     completionMessage: "You\u2019ve looked at what the Bible says about money \u2014 and it said a lot. Ross\u2019s words may have sobered you. That\u2019s good. Clarity is the first step to freedom.",
     closingPrayer: "Father, I confess that I often forget that everything I have comes from you. Help me see my pay, my savings, my possessions not as mine but as yours. Show me where I\u2019ve made money a functional god in my life. I want to worship you, not Mammon. Give me the courage to be honest about where I really am. Amen.",
     pauseTimestamps: [
@@ -263,8 +263,8 @@ const MODULES = [
     description: "Halim Suh reveals how money quietly demands our worship. Through the story of the Rich Young Ruler, discover why Jesus treats money as a salvation issue.",
     timeSermon: "~35 min",
     timeActivity: "~15 min",
-    // TODO: Replace with actual Vimeo ID for Halim Suh \u2014 God & Money Part 2
-    vimeoId: "TODO_MODULE_3",
+    // Halim Suh — God & Money Part 2 (Jan 29, 2023)
+    vimeoId: "793864267",
     completionMessage: "Halim\u2019s sermon cuts deep. Money\u2019s grip is real, but so is the freedom Jesus offers. Let conviction lead you to the cross, not to guilt.",
     closingPrayer: "Jesus, you were the true Rich Young Ruler. You gave up everything \u2014 your glory, your comfort, your life \u2014 to be with me. Forgive me for the ways I\u2019ve let money become what the Father is to you. Show me where money has captured my heart. I don\u2019t want to walk away sorrowful. I want to follow you. Whatever it costs. Amen.",
     pauseTimestamps: [
@@ -348,8 +348,8 @@ const MODULES = [
     description: "Ross Lester reframes Philippians 4:13 and walks through nine biblical principles for managing money. This is where conviction becomes action.",
     timeSermon: "~35 min",
     timeActivity: "~20 min",
-    // TODO: Replace with actual Vimeo ID for Ross Lester \u2014 God & Money Part 3
-    vimeoId: "TODO_MODULE_4",
+    // Ross Lester — God & Money Part 3 (Feb 5, 2023)
+    vimeoId: "796050707",
     completionMessage: "You now have practical tools for managing money God\u2019s way. Head knowledge becomes heart change through practice. Start this week.",
     closingPrayer: "Holy Spirit, I\u2019m asking you to rule my budget. Show me where I\u2019m spending on things that don\u2019t reflect your values. Give me the supernatural contentment that Paul learned \u2014 in plenty and in hunger. I don\u2019t want to manage my money the world\u2019s way. I want to manage it your way, even when that means giving up things I\u2019ve told myself I need. Make me free. Amen.",
     pauseTimestamps: [
@@ -461,8 +461,8 @@ const MODULES = [
     description: "Kevin Peck reveals the greater blessing \u2014 a joy that\u2019s indestructible and multiplying. This is the capstone: where the generous life begins.",
     timeSermon: "~38 min",
     timeActivity: "~20 min",
-    // TODO: Replace with actual Vimeo ID for Kevin Peck \u2014 God & Money Part 4
-    vimeoId: "TODO_MODULE_5",
+    // Kevin Peck — God & Money Part 4 (Feb 12, 2023)
+    vimeoId: "798219923",
     completionMessage: "The generous life isn\u2019t about deprivation \u2014 it\u2019s about a joy the world can\u2019t give and can\u2019t take away. Enter into it.",
     closingPrayer: "Father, you are the most generous being in the universe. You gave your Son. You gave your Spirit. You give me breath every morning. I want to enter the joy of giving \u2014 the indestructible, multiplying joy. I\u2019m tired of making mud pies when you\u2019re offering me the ocean. Here is my commitment. Hold me to it. Surround me with people who will hold me to it. And let me taste the joy that is more blessed to give than to receive. In Jesus\u2019 name, amen.",
     pauseTimestamps: [
